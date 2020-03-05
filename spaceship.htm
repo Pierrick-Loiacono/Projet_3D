@@ -307,7 +307,7 @@
             initGL(canvas);
 
             // test: cr�ation d'une texture
-            var tex = initTexture('textures/crotte.png');
+            var tex = initTexture('textures/eclair.png');
 
             initBackgroundShader();
             initModelShader();
@@ -315,9 +315,8 @@
 
             //heightfield = new Heightfield();
             background = new Background();
-            spaceship = new Model('models/plane.obj');
+            spaceship = new Model('models/harry.obj');
             shootSample = new Splat(tex);
-
             // la couleur de fond sera grise fonc�e
             gl.clearColor(0.3, 0.3, 0.3, 1.0);
 
