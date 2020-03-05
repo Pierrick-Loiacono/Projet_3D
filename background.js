@@ -38,7 +38,7 @@ function Background() {
     this.initParameters();
     
     this.vao = gl.createVertexArray();
-    gl.bindVertexArray(this.vao);
+    gl.bindVertexArray(this.vao);0
     
     // cree un nouveau buffer sur le GPU et l'active
     this.vertexBuffer = gl.createBuffer();
@@ -85,7 +85,7 @@ Background.prototype.initParameters = function() {
 Background.prototype.setParameters = function(elapsed) {
     // animer le fond en modifiant la variable offset
     // par exemple :
-    // this.offset[1] += ...
+    this.offset[1] += 0.01;
 }
 
 Background.prototype.sendUniformVariables = function() {
