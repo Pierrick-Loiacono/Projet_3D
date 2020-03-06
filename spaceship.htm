@@ -191,7 +191,10 @@
 
         var background;
         var spaceship;
-        var shootSample;
+        var eclairArray= [];
+        var tex;
+        // var shootSample;
+
 
         function drawScene() {
             // initialisation du viewport
@@ -212,9 +215,14 @@
 
             // test pour afficher un splat quand on appuie sur espace
             gl.enable(gl.BLEND); // transparence activ�e
-            gl.useProgram(shootSample.shader());
-            shootSample.sendUniformVariables();
-            shootSample.draw();
+            // gl.useProgram(shootSample.shader());
+            eclairArray.forEach(eclair  => {
+                gl.useProgram(eclair.shader());
+                eclair.sendUniformVariables();
+                eclair.draw();
+            });
+            // shootSample.sendUniformVariables();
+            // shootSample.draw();
             gl.disable(gl.BLEND); // transparence d�sactiv�e
         }
 
@@ -253,7 +261,7 @@
 
             if (currentlyPressedKeys[77]) { // M
                 // juste un test pour supprimer un splat (tir)
-                shootSample.clear();
+                // shootSample.clear();
             }
 
             if (currentlyPressedKeys[32]) { // SPACE
@@ -263,7 +271,14 @@
                 var y = p[1][1];
                 var z = p[1][2] + 0.005; // profondeur du splat (juste derri�re le vaisseau)
 
-                shootSample.setPosition(x, y, z);
+                if (timeNow - lastTimeEclair > 300 || lastTimeEclair === 0) {
+                    var eclair = new Splat(tex);
+
+                    eclair.setPosition(x, y, z);
+                    eclairArray.push(eclair);
+                    lastTimeEclair = timeNow;
+                }
+                // shootSample.setPosition(x, y, z);
             }
 
         }
@@ -277,18 +292,27 @@
 
         // animation
         var lastTime = 0;
+        var lastTimeEclair = 0;
+        var timeNow;
 
         function animate() {
             // fonction appel�e � chaque frame, permet d'animer la sc�ne
-            var timeNow = new Date().getTime();
-            if (lastTime != 0) {
+            timeNow = new Date().getTime();
+            if (lastTime !== 0) {
                 // anime chacun des objets de la scene
                 // si necessaire (en fonction du temps ecoul�)
                 var elapsed = timeNow - lastTime;
                 spaceship.setParameters(elapsed);
                 background.setParameters(elapsed);
-                shootSample.setParameters(elapsed);
+                eclairArray.forEach(eclair  => {
+                    eclair.setParameters(elapsed);
 
+                    if(eclair.position[1] > 1) {
+                        eclair.clear();
+                    }
+                });
+                eclairArray = eclairArray.filter(eclair => eclair.loaded);
+                // shootSample.setParameters(elapsed);
             }
             lastTime = timeNow;
         }
@@ -307,7 +331,7 @@
             initGL(canvas);
 
             // test: cr�ation d'une texture
-            var tex = initTexture('textures/eclair.png');
+            tex = initTexture('textures/eclair.png');
 
             initBackgroundShader();
             initModelShader();
@@ -316,7 +340,7 @@
             //heightfield = new Heightfield();
             background = new Background();
             spaceship = new Model('models/harry.obj');
-            shootSample = new Splat(tex);
+            // shootSample = new Splat(tex);
             // la couleur de fond sera grise fonc�e
             gl.clearColor(0.3, 0.3, 0.3, 1.0);
 
