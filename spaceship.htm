@@ -9,6 +9,7 @@
     <script type="text/javascript" src="background.js"></script>
     <script type="text/javascript" src="modelObj.js"></script>
     <script type="text/javascript" src="splat.js"></script>
+    <script type="text/javascript" src="splatAdverse.js"></script>
 
     <script id="background-vs" type="x-shader/x-vertex">#version 300 es
       // *** le vertex shader *** 
@@ -186,13 +187,53 @@
       }
 
     </script>
+<script id="splat-vs-adverse" type="x-shader/x-vertex">#version 300 es
+      // *** le vertex shader ***
+      layout(location=0) in vec3 aVertexPosition; // la position du sommet
+      layout(location=1) in vec2 aVertexCoord; // sa coordonnee de texture
+
+      uniform vec3 uAdversePosition; // position du vaisseau
+      out vec2 vTextureCoord; // on souhaite rasteriser la coordonnee
+
+      void main(void) {
+	  // projection de la position
+	  gl_Position = vec4(aVertexPosition.xy+uAdversePosition.xy,uAdversePosition.z, 1.0);
+
+	  // stockage de la coordonnee de texture
+	  vTextureCoord = aVertexCoord;
+      }
+
+    </script>
+
+    <script id="splat-fs-adverse" type="x-shader/x-fragment">#version 300 es
+      // *** le fragment shader ***
+      precision highp float; // precision des nombres flottant
+
+      uniform vec3 maAdverseCouleur;
+      uniform sampler2D uAdverseTex;
+      in vec2 vTextureCoord; // recuperation de la coord rasterisee
+      out vec4 outColor;
+
+      void main(void) {
+	  float alpha = 1.-smoothstep(0.2,0.25,distance(vec2(.5),vTextureCoord));
+
+	  // TEST: affichae d'un point avec la couleur donn�e en param�tre
+	  //outColor = vec4(alpha*maCouleur,alpha);
+
+	  // TEST: affichage d'une texture donn�e en param�tre
+	  outColor = texture(uAdverseTex,vTextureCoord);
+      }
+
+    </script>
 
     <script type="text/javascript">
 
         var background;
         var spaceship;
+        var adversaireArray = [];
         var eclairArray= [];
         var tex;
+        var texAdverse;
         // var shootSample;
 
 
@@ -221,6 +262,13 @@
                 eclair.sendUniformVariables();
                 eclair.draw();
             });
+
+            adversaireArray.forEach(adversaire  => {
+                gl.useProgram(adversaire.shader());
+                adversaire.sendUniformVariables();
+                adversaire.draw();
+            });
+
             // shootSample.sendUniformVariables();
             // shootSample.draw();
             gl.disable(gl.BLEND); // transparence d�sactiv�e
@@ -278,6 +326,9 @@
                     eclairArray.push(eclair);
                     lastTimeEclair = timeNow;
                 }
+
+
+
                 // shootSample.setPosition(x, y, z);
             }
 
@@ -293,6 +344,7 @@
         // animation
         var lastTime = 0;
         var lastTimeEclair = 0;
+        var lastTimeAdverse = 0;
         var timeNow;
 
         function animate() {
@@ -304,6 +356,7 @@
                 var elapsed = timeNow - lastTime;
                 spaceship.setParameters(elapsed);
                 background.setParameters(elapsed);
+                // adversaire.setParametersAdverse(elapsed);
                 eclairArray.forEach(eclair  => {
                     eclair.setParameters(elapsed);
 
@@ -311,8 +364,24 @@
                         eclair.clear();
                     }
                 });
+
+                adversaireArray.forEach(adversaire  => {
+                    adversaire.setParameters(elapsed);
+                    if(adversaire.position[1] < -1) {
+                        adversaire.clear();
+                    }
+                });
+
                 eclairArray = eclairArray.filter(eclair => eclair.loaded);
+                adversaireArray = adversaireArray.filter(adversaire => adversaire.loaded);
+
                 // shootSample.setParameters(elapsed);
+                if (timeNow - lastTimeAdverse > 3000) {
+                    adversaire = new SplatAdverse(texAdverse);
+                    adversaireArray.push(adversaire);
+                    lastTimeAdverse = timeNow;
+
+                }
             }
             lastTime = timeNow;
         }
@@ -332,6 +401,7 @@
 
             // test: cr�ation d'une texture
             tex = initTexture('textures/eclair.png');
+            texAdverse = initTexture('textures/ghost.png');
 
             initBackgroundShader();
             initModelShader();
