@@ -26,6 +26,10 @@
           vTextureCoord = aVertexCoord;
       }
 
+
+
+
+
     </script>
 
     <script id="background-fs" type="x-shader/x-fragment">#version 300 es
@@ -110,6 +114,10 @@
       }
       
 
+
+
+
+
     </script>
 
     <script id="model-vs" type="x-shader/x-vertex">#version 300 es
@@ -129,6 +137,10 @@
           vNormal = mat3(inverse(transpose(uViewMatrix * uModelMatrix)))*normalize(aVertexNormal);
       }
 
+
+
+
+
     </script>
 
     <script id="model-fs" type="x-shader/x-fragment">#version 300 es
@@ -145,6 +157,10 @@
 	  // pour le moment, on affiche juste la normale
           outColor = vec4(n,1.);
       }
+
+
+
+
 
     </script>
 
@@ -163,6 +179,10 @@
 	  // stockage de la coordonnee de texture
 	  vTextureCoord = aVertexCoord;
       }
+
+
+
+
 
     </script>
 
@@ -186,8 +206,12 @@
 	  outColor = texture(uTex,vTextureCoord);
       }
 
+
+
+
+
     </script>
-<script id="splat-vs-adverse" type="x-shader/x-vertex">#version 300 es
+    <script id="splat-vs-adverse" type="x-shader/x-vertex">#version 300 es
       // *** le vertex shader ***
       layout(location=0) in vec3 aVertexPosition; // la position du sommet
       layout(location=1) in vec2 aVertexCoord; // sa coordonnee de texture
@@ -202,6 +226,10 @@
 	  // stockage de la coordonnee de texture
 	  vTextureCoord = aVertexCoord;
       }
+
+
+
+
 
     </script>
 
@@ -224,6 +252,10 @@
 	  outColor = texture(uAdverseTex,vTextureCoord);
       }
 
+
+
+
+
     </script>
 
     <script type="text/javascript">
@@ -231,9 +263,10 @@
         var background;
         var spaceship;
         var adversaireArray = [];
-        var eclairArray= [];
+        var eclairArray = [];
         var tex;
         var texAdverse;
+
         // var shootSample;
 
 
@@ -257,13 +290,13 @@
             // test pour afficher un splat quand on appuie sur espace
             gl.enable(gl.BLEND); // transparence activ�e
             // gl.useProgram(shootSample.shader());
-            eclairArray.forEach(eclair  => {
+            eclairArray.forEach(eclair => {
                 gl.useProgram(eclair.shader());
                 eclair.sendUniformVariables();
                 eclair.draw();
             });
 
-            adversaireArray.forEach(adversaire  => {
+            adversaireArray.forEach(adversaire => {
                 gl.useProgram(adversaire.shader());
                 adversaire.sendUniformVariables();
                 adversaire.draw();
@@ -328,7 +361,6 @@
                 }
 
 
-
                 // shootSample.setPosition(x, y, z);
             }
 
@@ -357,19 +389,35 @@
                 spaceship.setParameters(elapsed);
                 background.setParameters(elapsed);
                 // adversaire.setParametersAdverse(elapsed);
-                eclairArray.forEach(eclair  => {
+                eclairArray.forEach(eclair => {
                     eclair.setParameters(elapsed);
 
-                    if(eclair.position[1] > 1) {
+                    if (eclair.position[1] > 1) {
                         eclair.clear();
                     }
                 });
 
-                adversaireArray.forEach(adversaire  => {
+                adversaireArray.forEach(adversaire => {
                     adversaire.setParameters(elapsed);
-                    if(adversaire.position[1] < -1) {
+
+                    if (adversaire.position[1] < -1) {
                         adversaire.clear();
                     }
+                });
+
+                adversaireArray.forEach(adversaire => {
+                    eclairArray.forEach(eclair => {
+                        if (adversaire.position[0] < eclair.position[0] + eclair.width
+                            && adversaire.position[0] + adversaire.width > eclair.position[0]
+                            && adversaire.position[1] < eclair.position[1] + eclair.width
+                            && adversaire.position[1] + adversaire.width > eclair.position[1]) {
+
+                            adversaire.clear();
+                            eclair.clear();
+
+                        }
+                    });
+
                 });
 
                 eclairArray = eclairArray.filter(eclair => eclair.loaded);
@@ -382,6 +430,7 @@
                     lastTimeAdverse = timeNow;
 
                 }
+
             }
             lastTime = timeNow;
         }
