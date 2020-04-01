@@ -438,20 +438,20 @@
                     });
                 });
 
-                // var p = spaceship.getBBox(); // boite englobante ennemy
-                // var x = (p[0][0] + p[1][0]) / 2;
-                // var g = p[0][0];
-                // var d = p[1][0];
-                // var y = p[1][1];
-                // var z = p[1][2] + 0.005; // profondeur du splat (juste derrière le vaisseau)
-                // adversaireArray.forEach(adversaire => {
-                //
-                //     // Réinitialiser position enemy et avion lorsque collision
-                //     if (adversaire.position[0] < g && adversaire.position[0] > d && adversaire.position[1] >= y && spaceship.loaded) {
-                //         adversaire.clear();
-                //         spaceship.clear();
-                //     }
-                // });
+                // Test de la collision entre splat et model (en cours)
+                adversaireArray.forEach(adversaire => {
+                    var positions = spaceship.getBBox();
+                    var x1 = positions[0][0];
+                    var x2 = positions[1][0];
+                    var y1 = positions[0][1];
+                    var y2 = positions[1][1];
+
+                    if (adversaire.position[0] < x1 && adversaire.position[0] > x2 && adversaire.position[1] > y1 && adversaire.position[1] < y2){
+                        spaceship.clear();
+                        adversaire.clear();
+
+                    }
+                });
 
                 eclairArray = eclairArray.filter(eclair => eclair.loaded);
                 adversaireArray = adversaireArray.filter(adversaire => adversaire.loaded);
