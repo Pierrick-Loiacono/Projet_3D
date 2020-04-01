@@ -81,9 +81,9 @@ SplatAdverse.prototype.shader = function() {
 
 SplatAdverse.prototype.initParameters = function() {
     // paramètres par défaut d'un splat (taille, position, couleur)
-    this.width = 0.15;
-    this.height = 0.15;
-    this.position = [Math.random(),1.0,0.0];
+    this.width = 0.12;
+    this.height = 0.12;
+    this.position = [(Math.random() * 2 - 1),1.0,0.0];
     this.couleur = [1,0,0];
     this.time = 0.0;
 }

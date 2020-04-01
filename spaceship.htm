@@ -30,6 +30,7 @@
 
 
 
+
     </script>
 
     <script id="background-fs" type="x-shader/x-fragment">#version 300 es
@@ -102,17 +103,18 @@
       void main(void) {
 	  // d�calage avec la variable uOffset
 	  vec2 p = vTextureCoord*2.0-vec2(1.0)+uOffset;
-	  
+
 	  float d = computeHeight(p); // profondeur au point p
 	  vec3 n = computeNormal(p); // normale au point p
 
 	  // affichage de la profondeur
-	  outColor = vec4(d,0.5,0.5,1.0);
+	  outColor = vec4(d,d,0.5,1.0);
 
 	  // affichage de la normale
 	  //outColor = vec4(n,1.0);
       }
       
+
 
 
 
@@ -141,6 +143,7 @@
 
 
 
+
     </script>
 
     <script id="model-fs" type="x-shader/x-fragment">#version 300 es
@@ -150,13 +153,25 @@
     in vec3 vNormal;
       out vec4 outColor;
 
-      void main(void) {
-          // la couleur est attribuee au fragment courant
-	  vec3 n = normalize(vNormal);
 
-	  // pour le moment, on affiche juste la normale
-          outColor = vec4(n,1.);
-      }
+      void main(void) {
+		// la couleur est attribuee au fragment courant
+		vec3 n = normalize(vNormal);
+		vec3 v = vec3(0.0,0.0,-1.0);
+		vec3 l = normalize(vec3(-0.2,0.0,1.0));
+		vec3 r = reflect(-l,n);
+
+		float s = 50.0;
+
+		vec3 Kd = vec3(.48,.48,.48);
+		vec3 Ks = vec3(1.0);
+		float diff = max(dot(l,n),0.0);
+		float spec = pow(max(dot(r,v),0.0),s);
+
+		// pour le moment, on affiche juste la normale
+		outColor = vec4(Kd*diff + Ks*spec, 1.0);
+	}
+
 
 
 
@@ -179,6 +194,7 @@
 	  // stockage de la coordonnee de texture
 	  vTextureCoord = aVertexCoord;
       }
+
 
 
 
@@ -210,6 +226,7 @@
 
 
 
+
     </script>
     <script id="splat-vs-adverse" type="x-shader/x-vertex">#version 300 es
       // *** le vertex shader ***
@@ -226,6 +243,7 @@
 	  // stockage de la coordonnee de texture
 	  vTextureCoord = aVertexCoord;
       }
+
 
 
 
@@ -251,6 +269,7 @@
 	  // TEST: affichage d'une texture donn�e en param�tre
 	  outColor = texture(uAdverseTex,vTextureCoord);
       }
+
 
 
 
@@ -417,14 +436,28 @@
 
                         }
                     });
-
                 });
+
+                // var p = spaceship.getBBox(); // boite englobante ennemy
+                // var x = (p[0][0] + p[1][0]) / 2;
+                // var g = p[0][0];
+                // var d = p[1][0];
+                // var y = p[1][1];
+                // var z = p[1][2] + 0.005; // profondeur du splat (juste derrière le vaisseau)
+                // adversaireArray.forEach(adversaire => {
+                //
+                //     // Réinitialiser position enemy et avion lorsque collision
+                //     if (adversaire.position[0] < g && adversaire.position[0] > d && adversaire.position[1] >= y && spaceship.loaded) {
+                //         adversaire.clear();
+                //         spaceship.clear();
+                //     }
+                // });
 
                 eclairArray = eclairArray.filter(eclair => eclair.loaded);
                 adversaireArray = adversaireArray.filter(adversaire => adversaire.loaded);
 
                 // shootSample.setParameters(elapsed);
-                if (timeNow - lastTimeAdverse > 3000) {
+                if (timeNow - lastTimeAdverse > 500) {
                     adversaire = new SplatAdverse(texAdverse);
                     adversaireArray.push(adversaire);
                     lastTimeAdverse = timeNow;
@@ -461,7 +494,7 @@
             spaceship = new Model('models/harry.obj');
             // shootSample = new Splat(tex);
             // la couleur de fond sera grise fonc�e
-            gl.clearColor(0.3, 0.3, 0.3, 1.0);
+            gl.clearColor(0.5, 0.5, 0.5, 1.0);
 
             // active le test de profondeur
             gl.enable(gl.DEPTH_TEST);
