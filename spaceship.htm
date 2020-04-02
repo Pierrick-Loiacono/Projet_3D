@@ -31,6 +31,7 @@
 
 
 
+
     </script>
 
     <script id="background-fs" type="x-shader/x-fragment">#version 300 es
@@ -107,13 +108,27 @@
 	  float d = computeHeight(p); // profondeur au point p
 	  vec3 n = computeNormal(p); // normale au point p
 
+	  vec3 gris = vec3(.28,.7,.7);
+	  vec3 bleu = vec3(.1,.3,.8);
+	  vec3 blanc = vec3(1.,1.,1.);
+
+        if (d <= -.3) {
+			outColor = vec4(bleu*n[1]*n[2]+bleu/2.,1.);
+		// de l'herbe sinon
+		} else if (d <= 1.5) {
+			outColor = vec4(gris*n[1]*n[2]+gris/2.,1.);
+		} else {
+			outColor = vec4(blanc*n[1]*n[2]+blanc/2.,1.);
+		}
+
 	  // affichage de la profondeur
-	  outColor = vec4(d,d,0.5,1.0);
+	  //outColor = vec4(d,d,0.5,1.0);
 
 	  // affichage de la normale
 	  //outColor = vec4(n,1.0);
       }
       
+
 
 
 
@@ -138,6 +153,7 @@
           gl_Position = uProjMatrix * uViewMatrix * uModelMatrix * vec4(aVertexPosition, 1.0);
           vNormal = mat3(inverse(transpose(uViewMatrix * uModelMatrix)))*normalize(aVertexNormal);
       }
+
 
 
 
@@ -177,6 +193,7 @@
 
 
 
+
     </script>
 
     <script id="splat-vs" type="x-shader/x-vertex">#version 300 es
@@ -194,6 +211,7 @@
 	  // stockage de la coordonnee de texture
 	  vTextureCoord = aVertexCoord;
       }
+
 
 
 
@@ -227,6 +245,7 @@
 
 
 
+
     </script>
     <script id="splat-vs-adverse" type="x-shader/x-vertex">#version 300 es
       // *** le vertex shader ***
@@ -243,6 +262,7 @@
 	  // stockage de la coordonnee de texture
 	  vTextureCoord = aVertexCoord;
       }
+
 
 
 
@@ -269,6 +289,7 @@
 	  // TEST: affichage d'une texture donn�e en param�tre
 	  outColor = texture(uAdverseTex,vTextureCoord);
       }
+
 
 
 
@@ -446,7 +467,7 @@
                     var y1 = positions[0][1];
                     var y2 = positions[1][1];
 
-                    if (adversaire.position[0] < x1 && adversaire.position[0] > x2 && adversaire.position[1] > y1 && adversaire.position[1] < y2){
+                    if (adversaire.position[0] < x1 && adversaire.position[0] > x2 && adversaire.position[1] > y1 && adversaire.position[1] < y2) {
                         spaceship.clear();
                         adversaire.clear();
 
