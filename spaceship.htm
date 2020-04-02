@@ -10,6 +10,7 @@
     <script type="text/javascript" src="modelObj.js"></script>
     <script type="text/javascript" src="splat.js"></script>
     <script type="text/javascript" src="splatAdverse.js"></script>
+    <script type="text/javascript" src="splatGameOver.js"></script>
 
     <script id="background-vs" type="x-shader/x-vertex">#version 300 es
       // *** le vertex shader *** 
@@ -25,13 +26,6 @@
           // stockage de la coordonnee de texture
           vTextureCoord = aVertexCoord;
       }
-
-
-
-
-
-
-
     </script>
 
     <script id="background-fs" type="x-shader/x-fragment">#version 300 es
@@ -127,13 +121,6 @@
 	  // affichage de la normale
 	  //outColor = vec4(n,1.0);
       }
-      
-
-
-
-
-
-
 
     </script>
 
@@ -153,13 +140,6 @@
           gl_Position = uProjMatrix * uViewMatrix * uModelMatrix * vec4(aVertexPosition, 1.0);
           vNormal = mat3(inverse(transpose(uViewMatrix * uModelMatrix)))*normalize(aVertexNormal);
       }
-
-
-
-
-
-
-
     </script>
 
     <script id="model-fs" type="x-shader/x-fragment">#version 300 es
@@ -187,13 +167,6 @@
 		// pour le moment, on affiche juste la normale
 		outColor = vec4(Kd*diff + Ks*spec, 1.0);
 	}
-
-
-
-
-
-
-
     </script>
 
     <script id="splat-vs" type="x-shader/x-vertex">#version 300 es
@@ -211,13 +184,6 @@
 	  // stockage de la coordonnee de texture
 	  vTextureCoord = aVertexCoord;
       }
-
-
-
-
-
-
-
     </script>
 
     <script id="splat-fs" type="x-shader/x-fragment">#version 300 es
@@ -239,13 +205,6 @@
 	  // TEST: affichage d'une texture donn�e en param�tre
 	  outColor = texture(uTex,vTextureCoord);
       }
-
-
-
-
-
-
-
     </script>
     <script id="splat-vs-adverse" type="x-shader/x-vertex">#version 300 es
       // *** le vertex shader ***
@@ -262,13 +221,6 @@
 	  // stockage de la coordonnee de texture
 	  vTextureCoord = aVertexCoord;
       }
-
-
-
-
-
-
-
     </script>
 
     <script id="splat-fs-adverse" type="x-shader/x-fragment">#version 300 es
@@ -289,14 +241,44 @@
 	  // TEST: affichage d'une texture donn�e en param�tre
 	  outColor = texture(uAdverseTex,vTextureCoord);
       }
-
-
-
-
-
-
-
     </script>
+    <script id="splatGameOver-vs" type="x-shader/x-vertex">#version 300 es
+	// *** le vertex shader ***
+	layout(location=0) in vec3 aVertexPosition;
+	layout(location=1) in vec2 aVertexCoord;
+
+	uniform vec3 uPosition;
+	out vec2 vTextureCoord;
+
+	void main(void) {
+		// projection de la position
+		gl_Position = vec4(aVertexPosition.xy+uPosition.xy, uPosition.z, 1.0);
+
+		// stockage de la coordonnee de texture
+		vTextureCoord = aVertexCoord;
+	}
+
+	</script>
+    <script id="splatGameOver-fs" type="x-shader/x-fragment">#version 300 es
+	// *** le fragment shader ***
+	precision highp float;
+
+	uniform vec3 maCouleur;
+	uniform sampler2D uTex;
+
+	in vec2 vTextureCoord;
+	out vec4 outColor;
+
+	void main(void) {
+		float alpha = 1.-smoothstep(0.2, 0.25, distance(vec2(.5), vTextureCoord));
+
+		// TEST: affichae d'un point avec la couleur donn�e en param�tre
+		//outColor = vec4(alpha*maCouleur,alpha);
+
+		// TEST: affichage d'une texture donn�e en param�tre
+		outColor = texture(uTex, vTextureCoord);
+	}
+	</script>
 
     <script type="text/javascript">
 
@@ -304,11 +286,11 @@
         var spaceship;
         var adversaireArray = [];
         var eclairArray = [];
+        var eclairAutorise = true;
         var tex;
         var texAdverse;
-
-        // var shootSample;
-
+        var textGameOver;
+        var gameOver;
 
         function drawScene() {
             // initialisation du viewport
@@ -327,23 +309,25 @@
             spaceship.sendUniformVariables();
             spaceship.draw();
 
-            // test pour afficher un splat quand on appuie sur espace
-            gl.enable(gl.BLEND); // transparence activ�e
-            // gl.useProgram(shootSample.shader());
+            gl.enable(gl.BLEND);
+            //Tableau dessine les éclairs
             eclairArray.forEach(eclair => {
                 gl.useProgram(eclair.shader());
                 eclair.sendUniformVariables();
                 eclair.draw();
             });
-
+        // Tableau qui dessine les adversaires
             adversaireArray.forEach(adversaire => {
                 gl.useProgram(adversaire.shader());
                 adversaire.sendUniformVariables();
                 adversaire.draw();
             });
 
-            // shootSample.sendUniformVariables();
-            // shootSample.draw();
+            // dessin GameOver
+            gl.useProgram(gameOver.shader());
+            gameOver.sendUniformVariables();
+            gameOver.draw();
+
             gl.disable(gl.BLEND); // transparence d�sactiv�e
         }
 
@@ -390,34 +374,26 @@
                 var p = spaceship.getBBox(); // boite englobante du vaisseau sur l'�cran
                 var x = (p[0][0] + p[1][0]) / 2;
                 var y = p[1][1];
-                var z = p[1][2] + 0.005; // profondeur du splat (juste derri�re le vaisseau)
+                var z = p[1][2] + 0.005; // profondeur du splat (juste derriere le vaisseau)
 
-                if (timeNow - lastTimeEclair > 300 || lastTimeEclair === 0) {
+                // On créé notre éclair à l'appui de la touche espace, avec un temps entre les éclairs de 0.3 secondes, et si il est possible d'en lancer
+                if (timeNow - lastTimeEclair > 300 && eclairAutorise || lastTimeEclair === 0 && eclairAutorise) {
                     var eclair = new Splat(tex);
 
                     eclair.setPosition(x, y, z);
                     eclairArray.push(eclair);
                     lastTimeEclair = timeNow;
                 }
-
-
-                // shootSample.setPosition(x, y, z);
             }
 
         }
-
-        function mouseMove(event) {
-            // recup evenement souris
-            //var newx = 2.0*(event.clientX/gl.viewportWidth)-1.0;
-            //var newy = -(2.0*(event.clientY/gl.viewportHeight)-1.0);
-        }
-
 
         // animation
         var lastTime = 0;
         var lastTimeEclair = 0;
         var lastTimeAdverse = 0;
         var timeNow;
+        var score = 0;
 
         function animate() {
             // fonction appel�e � chaque frame, permet d'animer la sc�ne
@@ -428,10 +404,10 @@
                 var elapsed = timeNow - lastTime;
                 spaceship.setParameters(elapsed);
                 background.setParameters(elapsed);
-                // adversaire.setParametersAdverse(elapsed);
+
                 eclairArray.forEach(eclair => {
                     eclair.setParameters(elapsed);
-
+                    // SI l'éclair sort du cadre, on l'efface
                     if (eclair.position[1] > 1) {
                         eclair.clear();
                     }
@@ -439,14 +415,16 @@
 
                 adversaireArray.forEach(adversaire => {
                     adversaire.setParameters(elapsed);
-
+                    // SI l'adversaire sort du cadre, on l'efface
                     if (adversaire.position[1] < -1) {
                         adversaire.clear();
                     }
                 });
 
+                // Collision entre un adversaire et un eclair
                 adversaireArray.forEach(adversaire => {
                     eclairArray.forEach(eclair => {
+                        // Si leurs positions croisent, alors on les détruits, et on ajoute du score
                         if (adversaire.position[0] < eclair.position[0] + eclair.width
                             && adversaire.position[0] + adversaire.width > eclair.position[0]
                             && adversaire.position[1] < eclair.position[1] + eclair.width
@@ -454,12 +432,13 @@
 
                             adversaire.clear();
                             eclair.clear();
+                            getScore();
 
                         }
                     });
                 });
 
-                // Test de la collision entre splat et model (en cours)
+                // Collision entre les adversaire et notre modele (Harry Potter)
                 adversaireArray.forEach(adversaire => {
                     var positions = spaceship.getBBox();
                     var x1 = positions[0][0];
@@ -467,22 +446,25 @@
                     var y1 = positions[0][1];
                     var y2 = positions[1][1];
 
-                    if (adversaire.position[0] < x1 && adversaire.position[0] > x2 && adversaire.position[1] > y1 && adversaire.position[1] < y2) {
+                    // Si leurs positions se croisentn on les détruit tous les deux et on affiche un game over
+                    if (adversaire.position[0] > x1 && adversaire.position[0] < x2 && adversaire.position[1] > y1 && adversaire.position[1] < y2) {
                         spaceship.clear();
                         adversaire.clear();
+                        setEclairAutorise();
 
+                        gameOver.setPosition(0, 0, 0);
+                        gameOver.setParameters(elapsed);
                     }
                 });
 
                 eclairArray = eclairArray.filter(eclair => eclair.loaded);
                 adversaireArray = adversaireArray.filter(adversaire => adversaire.loaded);
 
-                // shootSample.setParameters(elapsed);
+                // On genere des adversaires toutes les 0.5 secondes
                 if (timeNow - lastTimeAdverse > 500) {
                     adversaire = new SplatAdverse(texAdverse);
                     adversaireArray.push(adversaire);
                     lastTimeAdverse = timeNow;
-
                 }
 
             }
@@ -506,9 +488,16 @@
             tex = initTexture('textures/eclair.png');
             texAdverse = initTexture('textures/ghost.png');
 
+            textGameOver = initTexture('textures/over.png');
+            gameOver = new SplatGameOver(textGameOver);
+            gameOver.position[1] = 6;
+            textGameOver.width = 1;
+            textGameOver.height = 1;
+
             initBackgroundShader();
             initModelShader();
             initSplatShader();
+            initSplatShaderGameOver();
 
             //heightfield = new Heightfield();
             background = new Background();
@@ -523,15 +512,22 @@
             // fonction de m�lange utilis�e pour la transparence
             gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-            /* Mouse and keyboard interaction functions */
-            //canvas.addEventListener('mousedown', tbMouseDown, true);
-            //canvas.addEventListener('mousemove', mouseMove, true);
-            //canvas.addEventListener('mouseup', tbMouseUp, true);
             document.onkeydown = handleKeyDown;
             document.onkeyup = handleKeyUp;
 
             // dessine la scene
             tick();
+        }
+
+        // Affichage du score
+        function getScore() {
+            score = score + 300;
+            document.getElementById("score").innerHTML = score;
+        }
+
+        // Interdit de lancer des éclairs
+        function setEclairAutorise() {
+            this.eclairAutorise = false;
         }
 
 
@@ -542,6 +538,11 @@
 
 
 <body onload="webGLStart();">
-<canvas id="SpaceShip" style="border: none;" width="800" height="800"></canvas>
+<div style="text-align:center">
+<div>
+    <h1>Score : <span id="score">0</span></h1>
+</div>
+    <canvas id="SpaceShip" style="border: none;" width="1000" height="800"></canvas>
+</div>
 </body>
 </html>
